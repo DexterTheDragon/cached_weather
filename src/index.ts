@@ -1,52 +1,48 @@
-import http from "http";
-import url from "url";
-import querystring from "querystring";
-import {OAuth} from "oauth";
+import "dotenv/config"
+import http from "http"
+import { URL } from "url"
+import { format } from "date-fns"
+import * as cached_weather from "./cached_weather"
 
-const PORT = process.env.PORT || 8080;
-const YAHOO_APP_ID = process.env.YAHOO_APP_ID;
-
-const oauth = new OAuth(
-    "",
-    "",
-    process.env.YAHOO_CONSUMER_KEY || "",
-    process.env.YAHOO_CONSUMER_SECRET || "",
-    '1.0',
-    null,
-    'HMAC-SHA1',
-    undefined,
-    {
-        "X-Yahoo-App-Id": YAHOO_APP_ID,
-        "Accept": "application/json",
-        "Connection": "close"
-    }
-);
+const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 8000
 
 const requestListener = function(request: http.IncomingMessage, response: http.ServerResponse) {
-    const current_url = request.url || "";
-    const query = url.parse(current_url).query || "";
-    const qs = querystring.parse(query);
+    const url = new URL(request.url || "", `http://${request.headers.host}`)
 
-    oauth.get(
-        `https://weather-ydn-yql.media.yahoo.com/forecastrss?location=${qs.location}&format=json`,
-        "",
-        "",
-        function (err, data) {
-            if (err) {
-                console.log(`${request.connection.remoteAddress} - - [${Date.now()}] "${request.method} ${request.url} HTTP/${request.httpVersion}" ${err.statusCode} -`);
-                response.writeHead(err.statusCode);
-                const res = JSON.parse(err.data.toString());
-                response.end(res["yahoo.error"]["yahoo.description"]);
-            } else {
-                console.log(`${request.connection.remoteAddress} - - [${Date.now()}] "${request.method} ${request.url} HTTP/${request.httpVersion}" 200 -`);
-                response.writeHead(200);
-                response.end(data);
-            }
+    switch(url.pathname) {
+        case "/favicon.ico": {
+            response.writeHead(404)
+            response.end()
+            break
         }
-    );
+        case "/status": {
+            response.writeHead(200)
+            response.end(JSON.stringify(cached_weather.getStats()))
+            break
+        }
+        case "/flush": {
+            cached_weather.flushAll()
+            response.writeHead(200)
+            response.end("OK")
+            break
+        }
+        default: {
+            const location: string = url.searchParams.get("location") || process.env.DEFAULT_LOCATION || ""
+
+            cached_weather.forLocation(location).then((data) => {
+                response.writeHead(data.statusCode, { "Content-Type": "application/json" })
+                response.end(data.data)
+            })
+        }
+    }
+
+    response.on("finish", () => {
+        console.log(`${request.headers["x-forwarded-for"] || request.connection.remoteAddress} - - [${format(new Date(), "dd/MMM/yyyy:HH:mm:ss xx")}] "${request.method} ${request.url} HTTP/${request.httpVersion}" ${response.statusCode} -`)
+    })
+
 }
 
-const server = http.createServer(requestListener);
-server.listen(PORT);
+const server = http.createServer(requestListener)
+server.listen(PORT, "0.0.0.0")
 
-console.log("Server running on", PORT);
+console.log("Server running on", PORT)

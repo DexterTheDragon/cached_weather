@@ -17,7 +17,10 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "oauth": "^0.9.15"
+    "axios": "^0.24.0",
+    "date-fns": "^2.15.0",
+    "dotenv": "^8.2.0",
+    "node-cache": "^5.1.2"
   },
   "scripts": {
     "start:dev": "nodemon",

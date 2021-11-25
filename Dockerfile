@@ -27,6 +27,6 @@ RUN yarn install --frozen-lockfile && yarn cache clean
 
 COPY --from=builder /usr/src/app/build/ ./
 
-EXPOSE 8080
+EXPOSE 8000
 
 CMD ["/sbin/tini", "--", "node", "index.js"]
