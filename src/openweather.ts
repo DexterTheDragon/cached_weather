@@ -13,7 +13,7 @@ async function getWeather(location: string) {
     const geo = data[0]
 
     try {
-        const response = await axios(`https://api.openweathermap.org/data/2.5/onecall?lat=${geo.lat}&lon=${geo.lon}&exclude=minutely,hourly,alerts&units=imperial&appid=${OWM_API_KEY}`)
+        const response = await axios(`https://api.openweathermap.org/data/3.0/onecall?lat=${geo.lat}&lon=${geo.lon}&exclude=minutely,hourly,alerts&units=imperial&appid=${OWM_API_KEY}`)
         return response
     } catch (error) {
         throw {statusCode: error.response.status, data: error.response.data.message}
